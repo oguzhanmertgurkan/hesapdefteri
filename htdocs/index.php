@@ -3,19 +3,6 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_login();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'settle') {
-    $from = $_POST['from'];
-    $to = $_POST['to'];
-    $amount = (float)$_POST['amount'];
-    $note = trim($_POST['note'] ?? '');
-    if ($from !== $to && $amount > 0) {
-        $stmt = $pdo->prepare("INSERT INTO settlements (settle_date, from_person, to_person, amount, note) VALUES (CURDATE(), ?, ?, ?, ?)");
-        $stmt->execute([$from, $to, $amount, $note]);
-    }
-    header('Location: index.php');
-    exit;
-}
-
 run_recurring_generation($pdo);
 
 $curMonth = date('Y-m');
@@ -26,16 +13,6 @@ $monthExpenses = $stmt->fetchAll();
 $monthTotal = array_sum(array_column($monthExpenses, 'amount'));
 
 $allExpenses = $pdo->query("SELECT * FROM expenses")->fetchAll();
-$net = 0;
-foreach ($allExpenses as $e) {
-    if ($e['paid_by'] === 'Ozi') $net += $e['owed_by_other'];
-    else $net -= $e['owed_by_other'];
-}
-$settlements = $pdo->query("SELECT * FROM settlements ORDER BY settle_date DESC")->fetchAll();
-foreach ($settlements as $s) {
-    if ($s['from_person'] === 'Ceyda' && $s['to_person'] === 'Ozi') $net -= $s['amount'];
-    if ($s['from_person'] === 'Ozi' && $s['to_person'] === 'Ceyda') $net += $s['amount'];
-}
 
 $positions = $pdo->query("SELECT * FROM investment_positions")->fetchAll();
 $totalInvested = 0;
@@ -99,12 +76,15 @@ foreach ($pdo->query("SELECT * FROM salary_entries")->fetchAll() as $se) {
 }
 $hasSalaryData = !empty($salaryRateByPerson);
 
+$curMonthBuckets = get_expense_bucket_totals($pdo, $curMonth);
+$hasExpenseData = array_sum($curMonthBuckets) > 0;
+
 $activeTab = 'dashboard';
 $loadChart = true;
 include __DIR__ . '/header.php';
 ?>
 
-<div class="grid cols-4" style="margin-bottom:20px;">
+<div class="grid cols-3" style="margin-bottom:20px;">
   <div class="stat-card">
     <div class="lbl">Bu Ay Toplam Gider</div>
     <div class="val"><?= fmt($monthTotal) ?></div>
@@ -120,45 +100,22 @@ include __DIR__ . '/header.php';
     <div class="val <?= $overallReturn >= 0 ? 'pos' : 'neg' ?>"><?= ($overallReturn >= 0 ? '+' : '') . number_format($overallReturn, 2) ?>%</div>
     <div class="sub">Yatırılan tutara göre</div>
   </div>
-  <div class="stat-card">
-    <div class="lbl">Aranızdaki Bakiye</div>
-    <div class="val <?= abs($net) < 0.01 ? '' : 'neg' ?>"><?= fmt(abs($net)) ?></div>
-    <div class="sub"><?= abs($net) < 0.01 ? 'Eşit' : ($net > 0 ? 'Ceyda → Ozi' : 'Ozi → Ceyda') ?></div>
-  </div>
 </div>
 
 <div class="panel-box">
-  <h3>Aranızdaki Bakiye</h3>
-  <div class="balance-panel">
-    <div class="balance-text">
-      <?php if (abs($net) < 0.01): ?>
-        Hesaplar eşit ✓
-      <?php elseif ($net > 0): ?>
-        <b>Ceyda</b>, <b>Ozi</b>'ye <?= fmt($net) ?> borçlu
-      <?php else: ?>
-        <b>Ozi</b>, <b>Ceyda</b>'ye <?= fmt(-$net) ?> borçlu
-      <?php endif; ?>
+  <h3>Bu Ayın Gider Dağılımı</h3>
+  <?php if ($hasExpenseData): ?>
+    <div class="grid cols-2">
+      <div class="invest-stats" style="gap:28px; align-items:flex-start;">
+        <div class="mini">Market<span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['market']) ?></span></div>
+        <div class="mini">Sabit Giderler <span style="font-weight:400; color:var(--paper-dim);">(kira, abonelikler vb.)</span><span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['sabit']) ?></span></div>
+        <div class="mini">Kişisel Harcamalar<span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['kisisel']) ?></span></div>
+      </div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chartBucket"></canvas></div>
     </div>
-    <button class="form-toggle" onclick="document.getElementById('settleForm').classList.toggle('open')" style="margin:0;">Ödeme Kaydet</button>
-  </div>
-  <form method="post" class="form-card" id="settleForm" style="margin-top:14px;">
-    <input type="hidden" name="action" value="settle">
-    <div class="form-row">
-      <div class="field"><label>Ödeyen</label><select name="from"><option>Ozi</option><option>Ceyda</option></select></div>
-      <div class="field"><label>Alan</label><select name="to"><option>Ceyda</option><option>Ozi</option></select></div>
-      <div class="field"><label>Tutar (₺)</label><input type="number" step="0.01" name="amount" required></div>
-      <div class="field"><label>Not</label><input type="text" name="note"></div>
-    </div>
-    <div class="form-actions">
-      <button class="btn-primary" type="submit">Kaydet</button>
-      <button class="btn-ghost" type="button" onclick="document.getElementById('settleForm').classList.remove('open')">Vazgeç</button>
-    </div>
-  </form>
-  <div class="settle-list">
-    <?php foreach (array_slice($settlements, 0, 8) as $s): ?>
-      <div class="settle-row"><span><?= $s['settle_date'] ?> — <?= htmlspecialchars($s['from_person']) ?> → <?= htmlspecialchars($s['to_person']) ?><?= $s['note'] ? ' (' . htmlspecialchars($s['note']) . ')' : '' ?></span><span class="mono"><?= fmt($s['amount']) ?></span></div>
-    <?php endforeach; ?>
-  </div>
+  <?php else: ?>
+    <div class="empty-state">Bu ay için henüz gider kaydı yok.</div>
+  <?php endif; ?>
 </div>
 
 <div class="panel-box">
@@ -209,6 +166,21 @@ include __DIR__ . '/header.php';
 Chart.defaults.color = '#b9b2a1';
 Chart.defaults.borderColor = 'rgba(238,231,216,0.08)';
 Chart.defaults.font.family = "'Inter', sans-serif";
+
+<?php if ($hasExpenseData): ?>
+new Chart(document.getElementById('chartBucket'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Market', 'Sabit Giderler', 'Kişisel Harcamalar'],
+    datasets: [{
+      data: [<?= $curMonthBuckets['market'] ?>, <?= $curMonthBuckets['sabit'] ?>, <?= $curMonthBuckets['kisisel'] ?>],
+      backgroundColor: ['#c9a227', '#c0564b', '#4fa381'],
+      borderColor: '#1b2422', borderWidth: 2
+    }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } } }
+});
+<?php endif; ?>
 
 new Chart(document.getElementById('chartTrend'), {
   type: 'bar',
