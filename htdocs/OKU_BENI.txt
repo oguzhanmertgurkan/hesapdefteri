@@ -1,0 +1,64 @@
+HESAP DEFTERİ — KURULUM TALİMATI
+==================================
+
+Bu klasördeki dosyalar gerçek bir PHP + MySQL web uygulamasıdır.
+Claude'a hiç bağımlı değildir — hangi hosting'e koyarsan, o linkle
+(örn. seninadin.rf.gd) doğrudan Safari/Chrome'da açılır.
+
+1) ÜCRETSİZ HOSTING HESABI AÇ
+------------------------------
+- https://infinityfree.com adresine git, "Create Account" ile üye ol.
+- Giriş yaptıktan sonra Control Panel'den yeni bir hosting hesabı oluştur
+  (bir alt alan adı seçeceksin: .rf.gd, .epizy.com, .wuaze.com gibi).
+- Hesabın aktif olması birkaç dakika sürebilir.
+
+2) VERİTABANI OLUŞTUR
+------------------------------
+- Control Panel'de hesabına gir, "MySQL Databases" bölümüne git.
+- Yeni bir veritabanı oluştur. Sana otomatik olarak şunları verecek:
+    - Veritabanı adı (örn. epiz_12345678_hesap)
+    - Kullanıcı adı (genelde veritabanı adıyla aynı)
+    - Şifre (sen belirlersin ya da otomatik üretilir)
+    - Host (genelde "localhost" veya "sqlXXX.epizy.com" gibi bir adres —
+      panelde yazan host adını kullan, "localhost" çalışmazsa onu dene)
+
+3) config.php DOSYASINI DÜZENLE
+------------------------------
+Bu klasördeki config.php dosyasını aç ve şu satırları
+2. adımda aldığın gerçek bilgilerle değiştir:
+
+    $DB_HOST = 'localhost';
+    $DB_NAME = 'BURAYA_VERITABANI_ADI';
+    $DB_USER = 'BURAYA_KULLANICI_ADI';
+    $DB_PASS = 'BURAYA_SIFRE';
+
+4) DOSYALARI YÜKLE
+------------------------------
+- Control Panel'de "File Manager" (Dosya Yöneticisi) aç, ya da bir FTP
+  programıyla (FileZilla gibi) FTP bilgilerinle bağlan.
+- htdocs klasörünün İÇİNE, bu zip'teki TÜM dosya ve klasörleri
+  (config.php, includes/, assets/, index.php, login.php, vb.) yükle.
+  htdocs'un kendisini değil, içindekileri kopyala.
+
+5) KURULUMU ÇALIŞTIR (TEK SEFERLİK)
+------------------------------
+- Tarayıcıda şu adrese git: http://seninalanadin.rf.gd/setup.php
+- Bu sayfa veritabanı tablolarını oluşturur ve iki hesabı hazırlar:
+    Kullanıcı adı: omg   Şifre: 0921   (Ozi)
+    Kullanıcı adı: cyd   Şifre: 0921   (Ceyda)
+- İşlem bittikten sonra setup.php dosyasını Dosya Yöneticisi/FTP'den SİL
+  (güvenlik için — başka biri tekrar çalıştırmasın).
+
+6) KULLANMAYA BAŞLA
+------------------------------
+- http://seninalanadin.rf.gd/login.php adresine git.
+- omg / 0921 veya cyd / 0921 ile giriş yap.
+- Bu link artık Claude'dan bağımsız, doğrudan Safari/Chrome'da,
+  telefon ve bilgisayarda aynı şekilde çalışır.
+
+SORUN ÇIKARSA
+------------------------------
+- "Veritabanına bağlanılamadı" hatası -> config.php'deki bilgileri
+  tekrar kontrol et (özellikle DB_HOST).
+- Beyaz/boş sayfa -> hosting'in PHP hata gösterimini aç ya da
+  bana ekran görüntüsünü gönder, birlikte bakarız.
