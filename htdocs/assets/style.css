@@ -134,6 +134,7 @@ table{width:100%; border-collapse:collapse; font-size:13.5px;}
 thead th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--paper-dim); padding:8px 10px; border-bottom:1px solid var(--line); }
 tbody td{padding:10px 10px; border-bottom:1px solid rgba(50,64,57,0.5);}
 tbody tr:hover{background:rgba(255,255,255,0.02);}
+tfoot td{padding:10px 10px; border-top:2px solid var(--line);}
 td.amount{font-family:'IBM Plex Mono',monospace; text-align:right; white-space:nowrap;}
 .cat-tag{ font-size:11px; padding:3px 9px; border-radius:20px; background:rgba(201,162,39,0.14); color:var(--gold-soft); white-space:nowrap; }
 .split-tag{ font-size:11px; padding:3px 9px; border-radius:20px; background:rgba(122,156,198,0.15); color:#9db6d9; white-space:nowrap; }
