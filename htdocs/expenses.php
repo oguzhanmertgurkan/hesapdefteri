@@ -79,6 +79,9 @@ function split_label($e) {
 }
 
 $filteredTotal = array_sum(array_column($rows, 'amount'));
+$catLabel = $fCat ?: 'Tüm Kategoriler';
+$personLabel = $fPerson ?: 'Herkes';
+$monthLabel = $fMonth ? date('F Y', strtotime($fMonth . '-01')) : 'Tüm Zamanlar';
 
 $activeTab = 'expenses';
 include __DIR__ . '/header.php';
@@ -189,6 +192,12 @@ include __DIR__ . '/header.php';
     <input type="month" name="month" value="<?= htmlspecialchars($fMonth) ?>" onchange="this.form.submit()">
     <a class="btn-ghost" href="expenses.php">Filtreleri Temizle</a>
   </form>
+  <p style="font-size:12px; color:var(--paper-dim); margin:0 0 14px 0;">
+    Gösterilen: <span class="cat-tag"><?= htmlspecialchars($catLabel) ?></span>
+    <span class="person-tag" style="margin-left:6px;"><?= htmlspecialchars($personLabel) ?></span>
+    <span class="split-tag" style="margin-left:6px;"><?= htmlspecialchars($monthLabel) ?></span>
+    <?php if (!$fMonth): ?><span style="margin-left:6px;">— aşağıdaki toplam <b>tüm zamanların</b> toplamıdır, tek bir ayı görmek için ay filtresini kullan.</span><?php endif; ?>
+  </p>
   <div style="overflow-x:auto;">
     <table>
       <thead><tr><th>Tarih</th><th>Kategori</th><th>Açıklama</th><th>Ödeyen</th><th>Bölüşüm</th><th style="text-align:right;">Tutar</th><th></th></tr></thead>
