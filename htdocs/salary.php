@@ -62,6 +62,11 @@ foreach ($entries as $e) {
     $rateByPersonMonth[$e['person']][$e['month']] = $e['rate'];
 }
 
+// ---- Bu ayın gider dağılımı: maaşın ne kadarı market / sabit gider / kişisel harcamaya gidiyor ----
+$curMonthEntries = array_filter($entries, fn($e) => $e['month'] === $curMonth);
+$combinedSalary = array_sum(array_column($curMonthEntries, 'salary_amount'));
+$curMonthBuckets = get_expense_bucket_totals($pdo, $curMonth);
+
 $activeTab = 'salary';
 $loadChart = true;
 include __DIR__ . '/header.php';
@@ -95,6 +100,29 @@ include __DIR__ . '/header.php';
     <button class="btn-ghost" type="button" onclick="document.getElementById('pastMonthForm').classList.remove('open')">Vazgeç</button>
   </div>
 </form>
+
+<div class="panel-box">
+  <h3>Bu Ayın Gider Dağılımı (Maaşa Göre)</h3>
+  <?php if ($combinedSalary > 0): ?>
+    <div class="invest-stats" style="gap:28px;">
+      <div class="mini">Market
+        <span class="v" style="color:var(--gold-soft);">%<?= number_format($curMonthBuckets['market'] / $combinedSalary * 100, 1) ?></span>
+        <div style="font-size:11.5px; color:var(--paper-dim); margin-top:4px;"><?= fmt($curMonthBuckets['market']) ?></div>
+      </div>
+      <div class="mini">Sabit Giderler <span style="font-weight:400; color:var(--paper-dim);">(kira, abonelikler vb.)</span>
+        <span class="v" style="color:var(--gold-soft);">%<?= number_format($curMonthBuckets['sabit'] / $combinedSalary * 100, 1) ?></span>
+        <div style="font-size:11.5px; color:var(--paper-dim); margin-top:4px;"><?= fmt($curMonthBuckets['sabit']) ?></div>
+      </div>
+      <div class="mini">Kişisel Harcamalar
+        <span class="v" style="color:var(--gold-soft);">%<?= number_format($curMonthBuckets['kisisel'] / $combinedSalary * 100, 1) ?></span>
+        <div style="font-size:11.5px; color:var(--paper-dim); margin-top:4px;"><?= fmt($curMonthBuckets['kisisel']) ?></div>
+      </div>
+    </div>
+    <p style="font-size:11.5px; color:var(--paper-dim); margin-top:14px;">Yüzdeler, bu ay için girilmiş toplam maaşa (<?= fmt($combinedSalary) ?>) göre hesaplanıyor. "Market" ve "Kira / Fatura" / "Abonelik" kategorileri otomatik ayrılıyor, geri kalan tüm kategoriler "kişisel harcama" sayılıyor.</p>
+  <?php else: ?>
+    <div class="empty-state">Bu ay için henüz maaş girilmediğinden oran hesaplanamıyor.</div>
+  <?php endif; ?>
+</div>
 
 <?php if (count($months) >= 2 && !empty($rateByPersonMonth)): ?>
 <div class="panel-box">

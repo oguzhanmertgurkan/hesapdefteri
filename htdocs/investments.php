@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $amount = $qty * $priceInput;
             }
-            $price = $priceInput; // orijinal para biriminde (USD ya da ₺) saklanır
+            $price = $priceInput;
         } else {
             $qty = null;
             $price = null;
@@ -129,8 +129,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// ---- Otomatik günlük güncelleme: sembolü olan hisse pozisyonları için,
-// bugün için henüz bir kayıt yoksa sessizce bir fiyat çeker. ----
 $autoCandidates = $pdo->query("SELECT * FROM investment_positions WHERE type='Hisse Senedi' AND ticker IS NOT NULL AND ticker <> ''")->fetchAll();
 foreach ($autoCandidates as $sp) {
     $chk = $pdo->prepare("SELECT COUNT(*) c FROM investment_entries WHERE position_id=? AND entry_date=CURDATE()");

@@ -3,7 +3,6 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_login();
 
-// Ödeme kaydetme (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'settle') {
     $from = $_POST['from'];
     $to = $_POST['to'];
@@ -16,6 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'settl
     header('Location: index.php');
     exit;
 }
+
+run_recurring_generation($pdo);
 
 $curMonth = date('Y-m');
 
@@ -221,7 +222,7 @@ const catData = <?= json_encode(array_values($catTotals)) ?>;
 new Chart(document.getElementById('chartCat'), {
   type: 'doughnut',
   data: { labels: catLabels.length ? catLabels : ['Veri yok'], datasets: [{ data: catLabels.length ? catData : [1],
-    backgroundColor: catLabels.length ? ['#c9a227','#4fa381','#c0564b','#7a9cc6','#b98fd1','#e0c25f','#5fb0a3','#a1a49b','#d98a6b'] : ['#324039'],
+    backgroundColor: catLabels.length ? ['#c9a227','#4fa381','#c0564b','#7a9cc6','#b98fd1','#e0c25f','#5fb0a3','#a1a49b','#d98a6b','#8fa6d1','#c48fd1'] : ['#324039'],
     borderColor: '#1b2422', borderWidth: 2 }] },
   options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } } }
 });

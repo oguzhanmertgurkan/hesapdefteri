@@ -56,8 +56,7 @@ try {
         echo "<li>— price_cache zaten vardı (sütun genişliği kontrol edildi).</li>";
     }
 
-    echo "</ul><p><b>Tüm geçişler tamamlandı.</b> Bu dosyayı (migrate_all.php) şimdi sil, sonra <a href='investments.php'>Birikim &amp; Yatırım sayfasına git</a>.</p>";
+    echo "</ul><p><b>Tüm geçişler tamamlandı.</b> Bu dosyayı (migrate_all.php) şimdi sil.</p>";
 } catch (PDOException $e) {
     echo "</ul><p style='color:red;'><b>Hata:</b> " . htmlspecialchars($e->getMessage()) . "</p>";
-    echo "<p>Bu ekran görüntüsünü Claude'a gönder.</p>";
 }

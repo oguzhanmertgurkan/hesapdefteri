@@ -56,7 +56,6 @@ function calc_position_timeline($entries) {
 }
 
 // Yahoo Finance'ten ham bir sembol için anlık fiyat çeker (borsa eki eklemeden).
-// Döner: [fiyat_veya_null, hata_mesajı_veya_null]
 function fetch_yahoo_symbol($symbol) {
     $url = 'https://query1.finance.yahoo.com/v8/finance/chart/' . rawurlencode($symbol);
     $price = null;
@@ -90,7 +89,6 @@ function fetch_yahoo_symbol($symbol) {
     return [$price !== null ? (float)$price : null, $price !== null ? null : $err];
 }
 
-// 'BIST' -> THYAO.IS gibi, 'US' -> AAPL / ^GSPC gibi ek istemeden kullanılır.
 function yahoo_symbol_for($ticker, $exchange) {
     $ticker = strtoupper(trim($ticker));
     return $exchange === 'US' ? $ticker : $ticker . '.IS';
@@ -100,7 +98,6 @@ function fetch_yahoo_price($ticker, $exchange = 'BIST') {
     return fetch_yahoo_symbol(yahoo_symbol_for($ticker, $exchange));
 }
 
-// Genel amaçlı önbellekli değer okuma (fiyat ya da kur için kullanılabilir).
 function get_cached_value($pdo, $cacheKey, $fetchFn, $maxAgeMinutes = 15) {
     $stmt = $pdo->prepare("SELECT price, fetched_at FROM price_cache WHERE ticker=?");
     $stmt->execute([$cacheKey]);
@@ -118,7 +115,6 @@ function get_cached_value($pdo, $cacheKey, $fetchFn, $maxAgeMinutes = 15) {
     return [null, $err];
 }
 
-// Hisse fiyatını borsasına göre (BIST: ₺ olarak zaten, US: $ olarak) çeker.
 function get_cached_price($pdo, $ticker, $exchange = 'BIST', $maxAgeMinutes = 15) {
     $ticker = strtoupper(trim($ticker));
     if (!$ticker) return [null, 'Sembol tanımlı değil'];
@@ -128,9 +124,57 @@ function get_cached_price($pdo, $ticker, $exchange = 'BIST', $maxAgeMinutes = 15
     }, $maxAgeMinutes);
 }
 
-// Güncel USD/TRY kurunu çeker (ABD borsalarındaki hisseleri ₺'ye çevirmek için).
 function get_usdtry_rate($pdo, $maxAgeMinutes = 15) {
     return get_cached_value($pdo, 'USDTRY', function () {
         return fetch_yahoo_symbol('TRY=X');
     }, $maxAgeMinutes);
+}
+
+// ---------------------------------------------------------------
+// Sabit ödemeler (abonelikler, kira vb.) ve harcama grupları
+// ---------------------------------------------------------------
+
+// Her kategori hangi "kova"ya (market / sabit / kişisel) ait?
+// Burada olmayan her kategori otomatik olarak 'kisisel' sayılır.
+function category_group($category) {
+    $map = [
+        'Market' => 'market',
+        'Kira / Fatura' => 'sabit',
+        'Abonelik' => 'sabit',
+    ];
+    return $map[$category] ?? 'kisisel';
+}
+
+// Ayın 15'inden itibaren, aktif sabit ödemeleri bir sonraki ay için
+// (henüz oluşturulmadıysa) otomatik olarak gider tablosuna ekler.
+function run_recurring_generation($pdo) {
+    if ((int)date('j') < 15) return;
+    $targetMonth = date('Y-m', strtotime('+1 month'));
+    $targetDate = $targetMonth . '-01';
+
+    $templates = $pdo->query("SELECT * FROM recurring_expenses WHERE active = 1")->fetchAll();
+    foreach ($templates as $t) {
+        $chk = $pdo->prepare("SELECT COUNT(*) c FROM expenses WHERE recurring_id=? AND DATE_FORMAT(expense_date,'%Y-%m')=?");
+        $chk->execute([$t['id'], $targetMonth]);
+        if ($chk->fetch()['c'] > 0) continue;
+
+        $amount = (float)$t['amount'];
+        $owed = 0;
+        if ($t['split_mode'] === 'esit') $owed = $amount / 2;
+        elseif ($t['split_mode'] === 'ozel') $owed = min(max((float)$t['ozel_tutar'], 0), $amount);
+
+        $ins = $pdo->prepare("INSERT INTO expenses (expense_date, amount, category, description, paid_by, split_mode, owed_by_other, recurring_id) VALUES (?,?,?,?,?,?,?,?)");
+        $ins->execute([$targetDate, $amount, $t['category'], $t['name'] . ' (sabit ödeme)', $t['person'], $t['split_mode'], $owed, $t['id']]);
+    }
+}
+
+// Belirli bir ay (YYYY-MM) için market / sabit / kişisel harcama toplamlarını döner.
+function get_expense_bucket_totals($pdo, $month) {
+    $stmt = $pdo->prepare("SELECT category, SUM(amount) s FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m')=? GROUP BY category");
+    $stmt->execute([$month]);
+    $totals = ['market' => 0, 'sabit' => 0, 'kisisel' => 0];
+    foreach ($stmt->fetchAll() as $row) {
+        $totals[category_group($row['category'])] += (float)$row['s'];
+    }
+    return $totals;
 }

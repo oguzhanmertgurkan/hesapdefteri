@@ -1,64 +1,59 @@
-HESAP DEFTERİ — KURULUM TALİMATI
-==================================
+HESAP DEFTERİ — GÜNCELLEME NOTLARI (Sabit Ödemeler + Market + Gider Dağılımı)
+================================================================================
 
-Bu klasördeki dosyalar gerçek bir PHP + MySQL web uygulamasıdır.
-Claude'a hiç bağımlı değildir — hangi hosting'e koyarsan, o linkle
-(örn. seninadin.rf.gd) doğrudan Safari/Chrome'da açılır.
+ARTIK GITHUB ÜZERİNDEN ÇALIŞIYORSUN
+------------------------------------
+Bu dosyaları InfinityFree'ye elle yükleme! Bunun yerine:
+  1) Bu zip'teki dosyaları kendi bilgisayarındaki (ya da GitHub web
+     arayüzünden) hesapdefteri reponun "htdocs" klasörüne kopyala/commit et.
+  2) main dalına push et.
+  3) GitHub Actions birkaç dakika içinde otomatik olarak InfinityFree'ye
+     yükleyecek (Actions sekmesinden yeşil tiki kontrol edebilirsin).
 
-1) ÜCRETSİZ HOSTING HESABI AÇ
+ÖNEMLİ: config.php'yi BU ZIP'TEN KOPYALAMA / ÜZERİNE YAZMA.
+Reponda config.php zaten .gitignore ile hariç tutuluyor ve hosting'de
+kendi gerçek şifreli hali duruyor — ona dokunmana hiç gerek yok.
+Bu zip'te onun yerine sadece "config.example.php" (şablon) var.
+
+BU GÜNCELLEMEDE YENİ/DEĞİŞEN DOSYALAR
+------------------------------------
+  - migrate_recurring.php     (YENİ — bir kerelik veritabanı geçişi)
+  - includes/functions.php    (DEĞİŞTİ — sabit ödeme + gider grubu mantığı)
+  - expenses.php               (DEĞİŞTİ — Market/Abonelik kategorisi + Sabit Ödemeler paneli)
+  - salary.php                 (DEĞİŞTİ — "Gider Dağılımı" paneli eklendi)
+  - schema.sql                 (DEĞİŞTİ — sadece sıfırdan kurulumlar için referans)
+
+Diğer dosyalar (index.php, investments.php, header.php, login.php, vb.)
+bu güncellemede değişmedi ama tam paket olsun diye zip'e eklendi.
+
+KURULUM ADIMLARI
 ------------------------------
-- https://infinityfree.com adresine git, "Create Account" ile üye ol.
-- Giriş yaptıktan sonra Control Panel'den yeni bir hosting hesabı oluştur
-  (bir alt alan adı seçeceksin: .rf.gd, .epizy.com, .wuaze.com gibi).
-- Hesabın aktif olması birkaç dakika sürebilir.
+1) Yukarıdaki dosyaları GitHub reposuna commit edip push et.
+2) Deploy tamamlandıktan sonra (Actions sekmesinde yeşil tik),
+   hesapdefteri.rf.gd/migrate_recurring.php adresine git.
+3) "recurring_expenses tablosu hazır" ve "expenses.recurring_id eklendi"
+   mesajlarını gör.
+4) migrate_recurring.php dosyasını GitHub'dan sil (commit + push) —
+   hosting'den otomatik kalkacak.
+5) hesapdefteri.rf.gd/expenses.php adresine git, "Sabit Ödemeler /
+   Abonelikler" panelinden Kira, Netflix, Apple Music, F1TV gibi
+   kalemleri bir kez tanımla.
 
-2) VERİTABANI OLUŞTUR
+NASIL ÇALIŞIYOR
 ------------------------------
-- Control Panel'de hesabına gir, "MySQL Databases" bölümüne git.
-- Yeni bir veritabanı oluştur. Sana otomatik olarak şunları verecek:
-    - Veritabanı adı (örn. epiz_12345678_hesap)
-    - Kullanıcı adı (genelde veritabanı adıyla aynı)
-    - Şifre (sen belirlersin ya da otomatik üretilir)
-    - Host (genelde "localhost" veya "sqlXXX.epizy.com" gibi bir adres —
-      panelde yazan host adını kullan, "localhost" çalışmazsa onu dene)
-
-3) config.php DOSYASINI DÜZENLE
-------------------------------
-Bu klasördeki config.php dosyasını aç ve şu satırları
-2. adımda aldığın gerçek bilgilerle değiştir:
-
-    $DB_HOST = 'localhost';
-    $DB_NAME = 'BURAYA_VERITABANI_ADI';
-    $DB_USER = 'BURAYA_KULLANICI_ADI';
-    $DB_PASS = 'BURAYA_SIFRE';
-
-4) DOSYALARI YÜKLE
-------------------------------
-- Control Panel'de "File Manager" (Dosya Yöneticisi) aç, ya da bir FTP
-  programıyla (FileZilla gibi) FTP bilgilerinle bağlan.
-- htdocs klasörünün İÇİNE, bu zip'teki TÜM dosya ve klasörleri
-  (config.php, includes/, assets/, index.php, login.php, vb.) yükle.
-  htdocs'un kendisini değil, içindekileri kopyala.
-
-5) KURULUMU ÇALIŞTIR (TEK SEFERLİK)
-------------------------------
-- Tarayıcıda şu adrese git: http://seninalanadin.rf.gd/setup.php
-- Bu sayfa veritabanı tablolarını oluşturur ve iki hesabı hazırlar:
-    Kullanıcı adı: omg   Şifre: 0921   (Ozi)
-    Kullanıcı adı: cyd   Şifre: 0921   (Ceyda)
-- İşlem bittikten sonra setup.php dosyasını Dosya Yöneticisi/FTP'den SİL
-  (güvenlik için — başka biri tekrar çalıştırmasın).
-
-6) KULLANMAYA BAŞLA
-------------------------------
-- http://seninalanadin.rf.gd/login.php adresine git.
-- omg / 0921 veya cyd / 0921 ile giriş yap.
-- Bu link artık Claude'dan bağımsız, doğrudan Safari/Chrome'da,
-  telefon ve bilgisayarda aynı şekilde çalışır.
+- Her ayın 15'inden itibaren, tanımlı aktif sabit ödemeler bir sonraki
+  ay için (henüz oluşturulmadıysa) otomatik olarak Giderler listesine
+  ekleniyor.
+- Bir sabit ödemenin tutarı değişirse (zam gelirse), Sabit Ödemeler
+  panelinden yeni tutarı girip "Güncelle" demen yeterli — o andan
+  itibaren sonraki aylar yeni tutarla oluşuyor, geçmiş kayıtlar
+  değişmiyor.
+- "Market" ve "Abonelik" yeni kategoriler olarak eklendi.
+- Maaş & Tasarruf sayfasında artık "Bu Ayın Gider Dağılımı" paneli var:
+  o ayki toplam maaşın (Ozi + Ceyda) yüzde kaçının Market'e, yüzde
+  kaçının Sabit Giderlere (Kira/Fatura/Abonelik), yüzde kaçının
+  kişisel harcamalara gittiğini gösteriyor.
 
 SORUN ÇIKARSA
 ------------------------------
-- "Veritabanına bağlanılamadı" hatası -> config.php'deki bilgileri
-  tekrar kontrol et (özellikle DB_HOST).
-- Beyaz/boş sayfa -> hosting'in PHP hata gösterimini aç ya da
-  bana ekran görüntüsünü gönder, birlikte bakarız.
+Ekran görüntüsünü Claude'a gönder, birlikte bakarız.

@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_login();
 
-$CATEGORIES = ["Gıda", "Kira / Fatura", "Ulaşım", "Sağlık", "Giyim", "Eğlence", "Eğitim", "Tatil", "Diğer"];
+$CATEGORIES = ["Market", "Gıda", "Kira / Fatura", "Abonelik", "Ulaşım", "Sağlık", "Giyim", "Eğlence", "Eğitim", "Tatil", "Diğer"];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -25,10 +25,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)$_POST['id'];
         $stmt = $pdo->prepare("DELETE FROM expenses WHERE id=?");
         $stmt->execute([$id]);
+
+    } elseif ($action === 'add_recurring') {
+        $name = trim($_POST['name']);
+        $category = $_POST['category'];
+        $amount = (float)($_POST['amount'] ?? 0);
+        $person = $_POST['person'];
+        $splitMode = $_POST['split_mode'];
+        if ($name && $amount > 0) {
+            $stmt = $pdo->prepare("INSERT INTO recurring_expenses (name, category, amount, person, split_mode) VALUES (?,?,?,?,?)");
+            $stmt->execute([$name, $category, $amount, $person, $splitMode]);
+        }
+    } elseif ($action === 'update_recurring_amount') {
+        $id = (int)$_POST['id'];
+        $amount = (float)($_POST['amount'] ?? 0);
+        if ($amount > 0) {
+            $stmt = $pdo->prepare("UPDATE recurring_expenses SET amount=? WHERE id=?");
+            $stmt->execute([$amount, $id]);
+        }
+    } elseif ($action === 'delete_recurring') {
+        $id = (int)$_POST['id'];
+        $stmt = $pdo->prepare("DELETE FROM recurring_expenses WHERE id=?");
+        $stmt->execute([$id]);
     }
     header('Location: expenses.php');
     exit;
 }
+
+run_recurring_generation($pdo);
+
+$recurringList = $pdo->query("SELECT * FROM recurring_expenses ORDER BY name")->fetchAll();
 
 $fCat = $_GET['category'] ?? '';
 $fPerson = $_GET['person'] ?? '';
@@ -88,6 +114,66 @@ include __DIR__ . '/header.php';
 </form>
 
 <div class="panel-box">
+  <h3>Sabit Ödemeler / Abonelikler</h3>
+  <p style="font-size:12.5px; color:var(--paper-dim); margin:-6px 0 16px 0; line-height:1.5;">
+    Her ayın 15'inden itibaren, burada tanımlı aktif sabit ödemeler bir sonraki ay için otomatik olarak gider listesine eklenir.
+    Fiyat değişirse (örn. zam gelirse) aşağıdan tutarı güncelle — o andan itibaren yeni tutar kullanılır, geçmiş kayıtlar değişmez.
+  </p>
+
+  <form method="post" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+    <input type="hidden" name="action" value="add_recurring">
+    <input type="text" name="name" placeholder="Örn. Kira, Netflix, F1TV" required style="width:150px;background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+    <select name="category" style="background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+      <?php foreach ($CATEGORIES as $c): ?><option <?= $c === 'Abonelik' ? 'selected' : '' ?>><?= $c ?></option><?php endforeach; ?>
+    </select>
+    <input type="number" step="0.01" name="amount" placeholder="₺ tutar" required style="width:110px;background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+    <select name="person" style="background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+      <option>Ozi</option><option>Ceyda</option>
+    </select>
+    <select name="split_mode" style="background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+      <option value="esit">Yarı Yarıya</option>
+      <option value="tek">Sadece Ödeyene Ait</option>
+    </select>
+    <button class="btn-primary" type="submit" style="padding:8px 16px;font-size:13px;">+ Ekle</button>
+  </form>
+
+  <?php if (!$recurringList): ?>
+    <div class="empty-state" style="padding:20px;">Henüz sabit ödeme tanımlanmadı.</div>
+  <?php else: ?>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Ad</th><th>Kategori</th><th>Ödeyen</th><th>Bölüşüm</th><th style="text-align:right;">Tutar</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ($recurringList as $r): ?>
+          <tr>
+            <td><?= htmlspecialchars($r['name']) ?></td>
+            <td><span class="cat-tag"><?= htmlspecialchars($r['category']) ?></span></td>
+            <td><span class="person-tag"><?= htmlspecialchars($r['person']) ?></span></td>
+            <td><span class="split-tag"><?= $r['split_mode'] === 'esit' ? '50/50' : 'Sadece ' . $r['person'] ?></span></td>
+            <td class="amount">
+              <form method="post" style="display:flex; gap:6px; justify-content:flex-end;">
+                <input type="hidden" name="action" value="update_recurring_amount">
+                <input type="hidden" name="id" value="<?= $r['id'] ?>">
+                <input type="number" step="0.01" name="amount" value="<?= $r['amount'] ?>" style="width:90px;background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:5px 8px;font-size:12.5px;">
+                <button class="btn-ghost" type="submit" style="padding:5px 10px;font-size:12px;">Güncelle</button>
+              </form>
+            </td>
+            <td>
+              <form method="post" onsubmit="return confirm('&quot;<?= htmlspecialchars($r['name']) ?>&quot; sabit ödemesini silmek istediğine emin misin? Geçmiş kayıtlar etkilenmez, sadece gelecekteki otomatik ekleme durur.')">
+                <input type="hidden" name="action" value="delete_recurring">
+                <input type="hidden" name="id" value="<?= $r['id'] ?>">
+                <button class="del-btn" type="submit">✕</button>
+              </form>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php endif; ?>
+</div>
+
+<div class="panel-box">
   <form method="get" class="filters">
     <select name="category" onchange="this.form.submit()">
       <option value="">Tüm Kategoriler</option>
@@ -109,7 +195,10 @@ include __DIR__ . '/header.php';
         <tr>
           <td><?= $r['expense_date'] ?></td>
           <td><span class="cat-tag"><?= htmlspecialchars($r['category']) ?></span></td>
-          <td><?= $r['description'] ? htmlspecialchars($r['description']) : '<span style="color:var(--paper-dim)">—</span>' ?></td>
+          <td>
+            <?= $r['description'] ? htmlspecialchars($r['description']) : '<span style="color:var(--paper-dim)">—</span>' ?>
+            <?php if ($r['recurring_id']): ?><span class="split-tag" style="margin-left:4px;">otomatik</span><?php endif; ?>
+          </td>
           <td><span class="person-tag"><?= htmlspecialchars($r['paid_by']) ?></span></td>
           <td><span class="split-tag"><?= split_label($r) ?></span></td>
           <td class="amount"><?= fmt($r['amount']) ?></td>
