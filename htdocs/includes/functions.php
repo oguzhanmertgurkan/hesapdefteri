@@ -145,26 +145,32 @@ function category_group($category) {
     return $map[$category] ?? 'kisisel';
 }
 
-// Ayın 15'inden itibaren, aktif sabit ödemeleri bir sonraki ay için
-// (henüz oluşturulmadıysa) otomatik olarak gider tablosuna ekler.
+// Aktif sabit ödemeleri, bu ay için (eksikse) ve ayın 15'inden itibaren
+// bir sonraki ay için de (eksikse) otomatik olarak gider tablosuna ekler.
 function run_recurring_generation($pdo) {
-    if ((int)date('j') < 15) return;
-    $targetMonth = date('Y-m', strtotime('+1 month'));
-    $targetDate = $targetMonth . '-01';
-
     $templates = $pdo->query("SELECT * FROM recurring_expenses WHERE active = 1")->fetchAll();
-    foreach ($templates as $t) {
-        $chk = $pdo->prepare("SELECT COUNT(*) c FROM expenses WHERE recurring_id=? AND DATE_FORMAT(expense_date,'%Y-%m')=?");
-        $chk->execute([$t['id'], $targetMonth]);
-        if ($chk->fetch()['c'] > 0) continue;
+    if (!$templates) return;
 
-        $amount = (float)$t['amount'];
-        $owed = 0;
-        if ($t['split_mode'] === 'esit') $owed = $amount / 2;
-        elseif ($t['split_mode'] === 'ozel') $owed = min(max((float)$t['ozel_tutar'], 0), $amount);
+    $targetMonths = [date('Y-m')];
+    if ((int)date('j') >= 15) {
+        $targetMonths[] = date('Y-m', strtotime('+1 month'));
+    }
 
-        $ins = $pdo->prepare("INSERT INTO expenses (expense_date, amount, category, description, paid_by, split_mode, owed_by_other, recurring_id) VALUES (?,?,?,?,?,?,?,?)");
-        $ins->execute([$targetDate, $amount, $t['category'], $t['name'] . ' (sabit ödeme)', $t['person'], $t['split_mode'], $owed, $t['id']]);
+    foreach ($targetMonths as $targetMonth) {
+        $targetDate = $targetMonth . '-01';
+        foreach ($templates as $t) {
+            $chk = $pdo->prepare("SELECT COUNT(*) c FROM expenses WHERE recurring_id=? AND DATE_FORMAT(expense_date,'%Y-%m')=?");
+            $chk->execute([$t['id'], $targetMonth]);
+            if ($chk->fetch()['c'] > 0) continue;
+
+            $amount = (float)$t['amount'];
+            $owed = 0;
+            if ($t['split_mode'] === 'esit') $owed = $amount / 2;
+            elseif ($t['split_mode'] === 'ozel') $owed = min(max((float)$t['ozel_tutar'], 0), $amount);
+
+            $ins = $pdo->prepare("INSERT INTO expenses (expense_date, amount, category, description, paid_by, split_mode, owed_by_other, recurring_id) VALUES (?,?,?,?,?,?,?,?)");
+            $ins->execute([$targetDate, $amount, $t['category'], $t['name'] . ' (sabit ödeme)', $t['person'], $t['split_mode'], $owed, $t['id']]);
+        }
     }
 }
 
