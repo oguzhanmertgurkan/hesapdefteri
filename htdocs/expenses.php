@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 run_recurring_generation($pdo);
 
 $recurringList = $pdo->query("SELECT * FROM recurring_expenses ORDER BY name")->fetchAll();
+$recurringTotal = array_sum(array_column($recurringList, 'amount'));
 
 $fCat = $_GET['category'] ?? '';
 $fPerson = $_GET['person'] ?? '';
@@ -120,6 +121,9 @@ include __DIR__ . '/header.php';
 
 <div class="panel-box">
   <h3>Sabit Ödemeler / Abonelikler</h3>
+  <?php if ($recurringList): ?>
+    <p style="font-size:13.5px; color:var(--paper-dim); margin:-6px 0 12px 0;">Aylık Toplam: <span class="mono" style="color:var(--gold-soft); font-weight:600; font-size:15px;"><?= fmt($recurringTotal) ?></span> <span style="font-size:12px;">(<?= count($recurringList) ?> kalem)</span></p>
+  <?php endif; ?>
   <p style="font-size:12.5px; color:var(--paper-dim); margin:-6px 0 16px 0; line-height:1.5;">
     Her ayın 15'inden itibaren, burada tanımlı aktif sabit ödemeler bir sonraki ay için otomatik olarak gider listesine eklenir.
     Fiyat değişirse (örn. zam gelirse) aşağıdan tutarı güncelle — o andan itibaren yeni tutar kullanılır, geçmiş kayıtlar değişmez.
@@ -204,11 +208,11 @@ include __DIR__ . '/header.php';
       <tbody>
       <?php foreach ($rows as $r): ?>
         <tr>
-          <td><?= $r['expense_date'] ?></td>
+          <td><?= $r['recurring_id'] ? '<span style="color:var(--paper-dim);">—</span>' : $r['expense_date'] ?></td>
           <td><span class="cat-tag"><?= htmlspecialchars($r['category']) ?></span></td>
           <td>
             <?= $r['description'] ? htmlspecialchars($r['description']) : '<span style="color:var(--paper-dim)">—</span>' ?>
-            <?php if ($r['recurring_id']): ?><span class="split-tag" style="margin-left:4px;">otomatik</span><?php endif; ?>
+            <?php if ($r['recurring_id']): ?><span class="split-tag" style="margin-left:4px;">sabit</span><?php endif; ?>
           </td>
           <td><span class="person-tag"><?= htmlspecialchars($r['paid_by']) ?></span></td>
           <td><span class="split-tag"><?= split_label($r) ?></span></td>
