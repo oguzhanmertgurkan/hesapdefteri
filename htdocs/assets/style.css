@@ -191,4 +191,18 @@ td.amount{font-family:'IBM Plex Mono',monospace; text-align:right; white-space:n
   .invest-stats{gap:14px;}
   .entry-form{flex-direction:column; align-items:stretch;}
   .entry-form select, .entry-form input, .entry-form button{width:100%;}
+
+  /* Genel güvenlik ağı: main içindeki TÜM formları mobilde tam genişlik
+     ve alt alta dizer — satır içi (inline) piksel genişlikli girdiler
+     dahil, tek tek her formu düzenlemeye gerek kalmadan. */
+  main form{ display:flex; flex-direction:column; align-items:stretch; gap:8px; }
+  main form input[type=text],
+  main form input[type=number],
+  main form input[type=date],
+  main form input[type=month],
+  main form select,
+  main form textarea,
+  main form button{ width:100% !important; }
+  main form.filters{ flex-direction:row; flex-wrap:wrap; }
+  main form.filters > *{ width:auto !important; flex:1 1 130px; }
 }
