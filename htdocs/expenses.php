@@ -227,15 +227,6 @@ include __DIR__ . '/header.php';
         </tr>
       <?php endforeach; ?>
       </tbody>
-      <?php if ($rows): ?>
-      <tfoot>
-        <tr>
-          <td colspan="5" style="text-align:right; font-weight:600; color:var(--paper-dim); padding-top:14px;">Toplam (<?= count($rows) ?> kayıt)</td>
-          <td class="amount" style="font-weight:700; font-size:15px; color:var(--gold-soft); padding-top:14px;"><?= fmt($filteredTotal) ?></td>
-          <td></td>
-        </tr>
-      </tfoot>
-      <?php endif; ?>
     </table>
   </div>
   <?php if (!$rows): ?><div class="empty-state">Henüz gider kaydı yok. Yukarıdan ilk kaydı ekle.</div><?php endif; ?>
