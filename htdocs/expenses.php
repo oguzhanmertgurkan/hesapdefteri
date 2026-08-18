@@ -60,7 +60,7 @@ $recurringTotal = array_sum(array_column($recurringList, 'amount'));
 $fCat = $_GET['category'] ?? '';
 $fPerson = $_GET['person'] ?? '';
 $fMonth = $_GET['month'] ?? '';
-$where = [];
+$where = ["recurring_id IS NULL"];
 $params = [];
 if ($fCat) { $where[] = "category=?"; $params[] = $fCat; }
 if ($fPerson) { $where[] = "paid_by=?"; $params[] = $fPerson; }
@@ -183,6 +183,8 @@ include __DIR__ . '/header.php';
 </div>
 
 <div class="panel-box">
+  <h3>Gider Kayıtları</h3>
+  <p style="font-size:12px; color:var(--paper-dim); margin:-6px 0 14px 0;">Sabit ödemeler burada listelenmez, onları yukarıdaki "Sabit Ödemeler / Abonelikler" panelinden yönetebilirsin.</p>
   <form method="get" class="filters">
     <select name="category" onchange="this.form.submit()">
       <option value="">Tüm Kategoriler</option>
