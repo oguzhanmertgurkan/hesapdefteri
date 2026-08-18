@@ -7,7 +7,7 @@
 require_once __DIR__ . '/includes/db.php';
 header('Content-Type: text/plain; charset=utf-8');
 
-$token = $_REQUEST['token'] ?? '';
+$token = trim($_REQUEST['token'] ?? '');
 $amount = (float)($_REQUEST['amount'] ?? 0);
 $category = $_REQUEST['category'] ?? 'Market';
 $desc = trim($_REQUEST['desc'] ?? '');
