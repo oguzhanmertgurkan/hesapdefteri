@@ -7,7 +7,7 @@ run_recurring_generation($pdo);
 
 $curMonth = date('Y-m');
 
-$stmt = $pdo->prepare("SELECT * FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ?");
+$stmt = $pdo->prepare("SELECT * FROM expenses WHERE budget_month = ?");
 $stmt->execute([$curMonth]);
 $monthExpenses = $stmt->fetchAll();
 $monthTotal = array_sum(array_column($monthExpenses, 'amount'));
@@ -35,7 +35,7 @@ for ($i = 5; $i >= 0; $i--) {
 }
 $trendData = [];
 foreach ($months as $m) {
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) s FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m')=?");
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) s FROM expenses WHERE budget_month=?");
     $stmt->execute([$m]);
     $trendData[] = (float)$stmt->fetch()['s'];
 }

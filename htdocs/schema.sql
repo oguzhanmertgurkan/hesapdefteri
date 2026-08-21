@@ -19,6 +19,15 @@ CREATE TABLE IF NOT EXISTS recurring_expenses (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS credit_cards (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  person VARCHAR(50) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  cutoff_day TINYINT NOT NULL,
+  due_day TINYINT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS expenses (
   id INT AUTO_INCREMENT PRIMARY KEY,
   expense_date DATE NOT NULL,
@@ -26,11 +35,15 @@ CREATE TABLE IF NOT EXISTS expenses (
   category VARCHAR(50) NOT NULL,
   description VARCHAR(255),
   paid_by VARCHAR(50) NOT NULL,
+  payment_method VARCHAR(20) NOT NULL DEFAULT 'nakit',
+  credit_card_id INT NULL,
   split_mode VARCHAR(20) NOT NULL,
   owed_by_other DECIMAL(12,2) NOT NULL DEFAULT 0,
   recurring_id INT NULL,
+  budget_month CHAR(7) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (recurring_id) REFERENCES recurring_expenses(id) ON DELETE SET NULL
+  FOREIGN KEY (recurring_id) REFERENCES recurring_expenses(id) ON DELETE SET NULL,
+  FOREIGN KEY (credit_card_id) REFERENCES credit_cards(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS investment_positions (

@@ -164,18 +164,57 @@ function run_recurring_generation($pdo) {
         if ($t['split_mode'] === 'esit') $owed = $amount / 2;
         elseif ($t['split_mode'] === 'ozel') $owed = min(max((float)$t['ozel_tutar'], 0), $amount);
 
-        $ins = $pdo->prepare("INSERT INTO expenses (expense_date, amount, category, description, paid_by, split_mode, owed_by_other, recurring_id) VALUES (?,?,?,?,?,?,?,?)");
-        $ins->execute([$targetDate, $amount, $t['category'], $t['name'] . ' (sabit ödeme)', $t['person'], $t['split_mode'], $owed, $t['id']]);
+        $ins = $pdo->prepare("INSERT INTO expenses (expense_date, amount, category, description, paid_by, split_mode, owed_by_other, recurring_id, budget_month) VALUES (?,?,?,?,?,?,?,?,?)");
+        $ins->execute([$targetDate, $amount, $t['category'], $t['name'] . ' (sabit ödeme)', $t['person'], $t['split_mode'], $owed, $t['id'], $targetMonth]);
     }
 }
 
 // Belirli bir ay (YYYY-MM) için market / sabit / kişisel harcama toplamlarını döner.
 function get_expense_bucket_totals($pdo, $month) {
-    $stmt = $pdo->prepare("SELECT category, SUM(amount) s FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m')=? GROUP BY category");
+    $stmt = $pdo->prepare("SELECT category, SUM(amount) s FROM expenses WHERE budget_month=? GROUP BY category");
     $stmt->execute([$month]);
     $totals = ['market' => 0, 'sabit' => 0, 'kisisel' => 0];
     foreach ($stmt->fetchAll() as $row) {
         $totals[category_group($row['category'])] += (float)$row['s'];
     }
     return $totals;
+}
+
+// Bir harcamanın hangi "bütçe ayı"na sayılacağını hesaplar.
+// Nakit/banka kartı: her zaman satın alma tarihinin ayı.
+// Kredi kartı: harcama önce hangi hesap kesimine (statement) girdiği bulunur,
+// sonra o kesimin SON ÖDEME tarihinin hangi aya denk geldiğine bakılır —
+// çünkü para gerçekten o ay hesaptan çıkıyor. Son ödeme hafta sonuna
+// denk gelirse bir sonraki pazartesiye kayar (banka kuralı).
+function compute_budget_month($expenseDate, $paymentMethod, $cutoffDay = null, $dueDay = null) {
+    $date = new DateTime($expenseDate);
+    if ($paymentMethod !== 'kredi_karti' || !$cutoffDay) {
+        return $date->format('Y-m');
+    }
+
+    // 1) Hangi kesim ayına giriyor?
+    $cutoffMonth = new DateTime($date->format('Y-m-01'));
+    if ((int)$date->format('j') > (int)$cutoffDay) {
+        $cutoffMonth->modify('+1 month');
+    }
+
+    // 2) Son ödeme hangi aya denk geliyor?
+    $dueMonth = clone $cutoffMonth;
+    if (!$dueDay) {
+        // son ödeme günü tanımlı değilse, kesim ayını kullan (eski davranış)
+        return $cutoffMonth->format('Y-m');
+    }
+    if ((int)$dueDay <= (int)$cutoffDay) {
+        $dueMonth->modify('+1 month');
+    }
+
+    $lastDay = (int)$dueMonth->format('t');
+    $dueDate = new DateTime($dueMonth->format('Y-m-') . str_pad((string)min((int)$dueDay, $lastDay), 2, '0', STR_PAD_LEFT));
+
+    // 3) Hafta sonu düzeltmesi: Cumartesi/Pazar ise Pazartesi'ye kaydır
+    $weekday = (int)$dueDate->format('N'); // 1=Pzt ... 6=Cmt, 7=Paz
+    if ($weekday === 6) $dueDate->modify('+2 days');
+    if ($weekday === 7) $dueDate->modify('+1 day');
+
+    return $dueDate->format('Y-m');
 }

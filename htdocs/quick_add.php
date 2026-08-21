@@ -40,8 +40,9 @@ if (!in_array($category, $allowedCategories, true)) {
 $person = $user['display_name'];
 $splitMode = 'esit';
 $owed = $amount / 2;
+$budgetMonth = date('Y-m');
 
-$stmt = $pdo->prepare("INSERT INTO expenses (expense_date, amount, category, description, paid_by, split_mode, owed_by_other) VALUES (CURDATE(), ?, ?, ?, ?, ?, ?)");
-$stmt->execute([$amount, $category, $desc, $person, $splitMode, $owed]);
+$stmt = $pdo->prepare("INSERT INTO expenses (expense_date, amount, category, description, paid_by, payment_method, split_mode, owed_by_other, budget_month) VALUES (CURDATE(), ?, ?, ?, ?, 'nakit', ?, ?, ?)");
+$stmt->execute([$amount, $category, $desc, $person, $splitMode, $owed, $budgetMonth]);
 
 echo "Eklendi: " . number_format($amount, 2, ',', '.') . " TL - " . $category . " (" . $person . ")";
