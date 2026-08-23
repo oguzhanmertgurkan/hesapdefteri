@@ -7,6 +7,7 @@ $PEOPLE = ['Ozi', 'Ceyda'];
 $curMonth = date('Y-m');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  try {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'set_salary') {
@@ -37,9 +38,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)$_POST['id'];
         $stmt = $pdo->prepare("DELETE FROM salary_entries WHERE id=?");
         $stmt->execute([$id]);
+
+    } elseif ($action === 'add_income') {
+        $person = $_POST['income_person'];
+        $date = $_POST['income_date'] ?: date('Y-m-d');
+        $source = trim($_POST['source'] ?? '');
+        $amount = (float)($_POST['income_amount'] ?? 0);
+        if ($amount > 0 && $source && in_array($person, $PEOPLE)) {
+            $stmt = $pdo->prepare("INSERT INTO extra_income (person, income_date, source, amount) VALUES (?,?,?,?)");
+            $stmt->execute([$person, $date, $source, $amount]);
+        }
+
+    } elseif ($action === 'delete_income') {
+        $id = (int)$_POST['id'];
+        $stmt = $pdo->prepare("DELETE FROM extra_income WHERE id=?");
+        $stmt->execute([$id]);
     }
     header('Location: salary.php');
     exit;
+  } catch (Throwable $e) {
+    echo "<div style='background:#1b2422;color:#eee7d8;font-family:monospace;padding:24px;'>";
+    echo "<h2 style='color:#c0564b;'>Bir hata oluştu</h2>";
+    echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p style='color:#b9b2a1;font-size:13px;'>" . htmlspecialchars($e->getFile()) . " (satır " . $e->getLine() . ")</p>";
+    echo "<p><a href='salary.php' style='color:#e0c25f;'>Maaş &amp; Tasarruf sayfasına dön</a></p>";
+    echo "</div>";
+    exit;
+  }
 }
 
 $entries = $pdo->query("SELECT * FROM salary_entries ORDER BY month DESC, person")->fetchAll();
@@ -66,6 +91,12 @@ foreach ($entries as $e) {
 $curMonthEntries = array_filter($entries, fn($e) => $e['month'] === $curMonth);
 $combinedSalary = array_sum(array_column($curMonthEntries, 'salary_amount'));
 $curMonthBuckets = get_expense_bucket_totals($pdo, $curMonth);
+
+$incomeList = $pdo->query("SELECT * FROM extra_income ORDER BY income_date DESC, id DESC")->fetchAll();
+$incomeThisMonth = array_filter($incomeList, fn($i) => substr($i['income_date'], 0, 7) === $curMonth);
+$incomeThisMonthByPerson = ['Ozi' => 0, 'Ceyda' => 0];
+foreach ($incomeThisMonth as $i) { $incomeThisMonthByPerson[$i['person']] += (float)$i['amount']; }
+$incomeThisMonthTotal = array_sum($incomeThisMonthByPerson);
 
 $activeTab = 'salary';
 $loadChart = true;
@@ -121,6 +152,53 @@ include __DIR__ . '/header.php';
     <p style="font-size:11.5px; color:var(--paper-dim); margin-top:14px;">Yüzdeler, bu ay için girilmiş toplam maaşa (<?= fmt($combinedSalary) ?>) göre hesaplanıyor. "Market" ve "Kira / Fatura" / "Abonelik" kategorileri otomatik ayrılıyor, geri kalan tüm kategoriler "kişisel harcama" sayılıyor.</p>
   <?php else: ?>
     <div class="empty-state">Bu ay için henüz maaş girilmediğinden oran hesaplanamıyor.</div>
+  <?php endif; ?>
+</div>
+
+<div class="panel-box">
+  <h3>Ek Gelirler <span style="font-size:12px; color:var(--paper-dim); font-weight:400;">(proje vb. düzensiz gelirler)</span></h3>
+  <p style="font-size:12.5px; color:var(--paper-dim); margin:-6px 0 14px 0;">Bu Ay Toplam: <span class="mono" style="color:var(--gold-soft); font-weight:600; font-size:15px;"><?= fmt($incomeThisMonthTotal) ?></span>
+    <span style="margin-left:14px;">Ozi: <?= fmt($incomeThisMonthByPerson['Ozi']) ?></span>
+    <span style="margin-left:10px;">Ceyda: <?= fmt($incomeThisMonthByPerson['Ceyda']) ?></span>
+  </p>
+
+  <form method="post" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+    <input type="hidden" name="action" value="add_income">
+    <select name="income_person" style="background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+      <option>Ozi</option><option>Ceyda</option>
+    </select>
+    <input type="date" name="income_date" value="<?= date('Y-m-d') ?>" style="background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+    <input type="text" name="source" placeholder="Kaynak (örn. Proje X)" required style="width:160px;background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+    <input type="number" step="0.01" name="income_amount" placeholder="₺ tutar" required style="width:120px;background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:8px 10px;font-size:13px;">
+    <button class="btn-primary" type="submit" style="padding:8px 16px;font-size:13px;">+ Ekle</button>
+  </form>
+
+  <?php if (!$incomeList): ?>
+    <div class="empty-state" style="padding:20px;">Henüz ek gelir kaydı yok.</div>
+  <?php else: ?>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Tarih</th><th>Kaynak</th><th>Kişi</th><th style="text-align:right;">Tutar</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach (array_slice($incomeList, 0, 20) as $i): ?>
+          <tr>
+            <td><?= $i['income_date'] ?></td>
+            <td><?= htmlspecialchars($i['source']) ?></td>
+            <td><span class="person-tag"><?= htmlspecialchars($i['person']) ?></span></td>
+            <td class="amount"><?= fmt($i['amount']) ?></td>
+            <td>
+              <form method="post" onsubmit="return confirm('Bu ek gelir kaydını silmek istediğine emin misin?')">
+                <input type="hidden" name="action" value="delete_income">
+                <input type="hidden" name="id" value="<?= $i['id'] ?>">
+                <button class="del-btn" type="submit">✕</button>
+              </form>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      <?php if (count($incomeList) > 20): ?><p style="font-size:11.5px; color:var(--paper-dim); margin-top:10px;">Son 20 kayıt gösteriliyor (toplam <?= count($incomeList) ?>).</p><?php endif; ?>
+    </div>
   <?php endif; ?>
 </div>
 
