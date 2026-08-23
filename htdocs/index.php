@@ -46,11 +46,6 @@ foreach ($monthExpenses as $e) {
     $catTotals[$e['category']] = ($catTotals[$e['category']] ?? 0) + $e['amount'];
 }
 
-$personTotals = ['Ozi' => 0, 'Ceyda' => 0];
-foreach ($monthExpenses as $e) {
-    $personTotals[$e['paid_by']] = ($personTotals[$e['paid_by']] ?? 0) + $e['amount'];
-}
-
 // ---- Maaş & Tasarruf Oranı (bu ay + son 6 ay trendi) ----
 $salaryCurMonth = [];
 $curMonthSalaryStmt = $pdo->prepare("SELECT * FROM salary_entries WHERE month=?");
@@ -151,15 +146,9 @@ include __DIR__ . '/header.php';
     <div class="chart-wrap"><canvas id="chartCat"></canvas></div>
   </div>
 </div>
-<div class="grid cols-2">
-  <div class="panel-box">
-    <h3>Yatırım Türü Dağılımı</h3>
-    <div class="chart-wrap"><canvas id="chartInvest"></canvas></div>
-  </div>
-  <div class="panel-box">
-    <h3>Kişi Bazında Bu Ay Ödenen</h3>
-    <div class="chart-wrap"><canvas id="chartPerson"></canvas></div>
-  </div>
+<div class="panel-box">
+  <h3>Yatırım Türü Dağılımı</h3>
+  <div class="chart-wrap"><canvas id="chartInvest"></canvas></div>
 </div>
 
 <script>
@@ -207,12 +196,6 @@ new Chart(document.getElementById('chartInvest'), {
     backgroundColor: typeLabels.length ? ['#4fa381','#c9a227','#7a9cc6','#c0564b','#b98fd1','#e0c25f','#a1a49b'] : ['#324039'],
     borderColor: '#1b2422', borderWidth: 2 }] },
   options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } } }
-});
-
-new Chart(document.getElementById('chartPerson'), {
-  type: 'bar',
-  data: { labels: ['Ozi', 'Ceyda'], datasets: [{ data: [<?= $personTotals['Ozi'] ?>, <?= $personTotals['Ceyda'] ?>], backgroundColor: ['#c9a227', '#4fa381'], borderRadius: 6, maxBarThickness: 60 }] },
-  options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v => '₺' + v } }, y: { grid: { display: false } } } }
 });
 
 <?php if ($hasSalaryData): ?>
