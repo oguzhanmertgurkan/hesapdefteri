@@ -6,6 +6,7 @@ require_login();
 $CATEGORIES = ["Market", "Gıda", "Kira / Fatura", "Abonelik", "Ulaşım", "Sağlık", "Giyim", "Eğlence", "Eğitim", "Tatil", "Diğer"];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  try {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
@@ -80,6 +81,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     header('Location: expenses.php');
     exit;
+  } catch (Throwable $e) {
+    http_response_code(200);
+    echo "<div style='background:#1b2422;color:#eee7d8;font-family:monospace;padding:24px;'>";
+    echo "<h2 style='color:#c0564b;'>Bir hata oluştu</h2>";
+    echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p style='color:#b9b2a1;font-size:13px;'>" . htmlspecialchars($e->getFile()) . " (satır " . $e->getLine() . ")</p>";
+    echo "<p><a href='expenses.php' style='color:#e0c25f;'>Giderler sayfasına dön</a></p>";
+    echo "</div>";
+    exit;
+  }
 }
 
 run_recurring_generation($pdo);
