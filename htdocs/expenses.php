@@ -61,6 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($category) {
                 $stmt = $pdo->prepare("UPDATE recurring_expenses SET amount=?, category=? WHERE id=?");
                 $stmt->execute([$amount, $category, $id]);
+                // Bu ay için zaten otomatik oluşmuş gider kaydı, oluşturulduğu andaki
+                // (belki o zaman yanlış olan) kategoriyi taşımaya devam eder — şablon
+                // düzeltildiğinde bu ayki kaydı da senkronize et ki grafiklerde eski
+                // kategoriyle görünmeye devam etmesin. Geçmiş aylara dokunulmaz,
+                // tutar bilerek senkronize edilmez (o zaten ayrı bir davranış).
+                $syncStmt = $pdo->prepare("UPDATE expenses SET category=? WHERE recurring_id=? AND budget_month=?");
+                $syncStmt->execute([$category, $id, date('Y-m')]);
             } else {
                 $stmt = $pdo->prepare("UPDATE recurring_expenses SET amount=? WHERE id=?");
                 $stmt->execute([$amount, $id]);
