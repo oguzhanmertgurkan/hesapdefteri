@@ -32,7 +32,7 @@ if (!$user) {
     exit;
 }
 
-$allowedCategories = ["Market", "Gıda", "Kira / Fatura", "Abonelik", "Ulaşım", "Sağlık", "Giyim", "Eğlence", "Eğitim", "Tatil", "Diğer"];
+$allowedCategories = ["Market", "Gıda", "Kira", "Fatura", "Abonelik", "Ulaşım", "Sağlık", "Giyim", "Eğlence", "Eğitim", "Tatil", "Diğer"];
 if (!in_array($category, $allowedCategories, true)) {
     $category = 'Diğer';
 }

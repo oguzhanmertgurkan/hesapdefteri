@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_login();
 
-$CATEGORIES = ["Market", "Gıda", "Kira / Fatura", "Abonelik", "Ulaşım", "Sağlık", "Giyim", "Eğlence", "Eğitim", "Tatil", "Diğer"];
+$CATEGORIES = ["Market", "Gıda", "Kira", "Fatura", "Abonelik", "Ulaşım", "Sağlık", "Giyim", "Eğlence", "Eğitim", "Tatil", "Diğer"];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
@@ -56,9 +56,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'update_recurring_amount') {
         $id = (int)$_POST['id'];
         $amount = (float)($_POST['amount'] ?? 0);
+        $category = $_POST['category'] ?? null;
         if ($amount > 0) {
-            $stmt = $pdo->prepare("UPDATE recurring_expenses SET amount=? WHERE id=?");
-            $stmt->execute([$amount, $id]);
+            if ($category) {
+                $stmt = $pdo->prepare("UPDATE recurring_expenses SET amount=?, category=? WHERE id=?");
+                $stmt->execute([$amount, $category, $id]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE recurring_expenses SET amount=? WHERE id=?");
+                $stmt->execute([$amount, $id]);
+            }
         }
     } elseif ($action === 'delete_recurring') {
         $id = (int)$_POST['id'];
@@ -93,11 +99,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-run_recurring_generation($pdo);
+try {
+    run_recurring_generation($pdo);
+} catch (Throwable $e) { /* geçiş henüz çalıştırılmamış olabilir, sayfa yine de açılsın */ }
 
-$recurringList = $pdo->query("SELECT * FROM recurring_expenses ORDER BY name")->fetchAll();
+try {
+    $recurringList = $pdo->query("SELECT * FROM recurring_expenses ORDER BY name")->fetchAll();
+} catch (Throwable $e) { $recurringList = []; }
 $recurringTotal = array_sum(array_column($recurringList, 'amount'));
-$cardList = $pdo->query("SELECT * FROM credit_cards ORDER BY person, name")->fetchAll();
+
+try {
+    $cardList = $pdo->query("SELECT * FROM credit_cards ORDER BY person, name")->fetchAll();
+} catch (Throwable $e) { $cardList = []; }
 
 $fCat = $_GET['category'] ?? '';
 $fPerson = $_GET['person'] ?? '';
@@ -299,18 +312,20 @@ document.querySelector('.form-toggle').addEventListener('click', () => setTimeou
   <?php else: ?>
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>Ad</th><th>Kategori</th><th>Ödeyen</th><th>Bölüşüm</th><th style="text-align:right;">Tutar</th><th></th></tr></thead>
+        <thead><tr><th>Ad</th><th>Ödeyen</th><th>Bölüşüm</th><th style="text-align:right;">Kategori / Tutar</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($recurringList as $r): ?>
           <tr>
             <td><?= htmlspecialchars($r['name']) ?></td>
-            <td><span class="cat-tag"><?= htmlspecialchars($r['category']) ?></span></td>
             <td><span class="person-tag"><?= htmlspecialchars($r['person']) ?></span></td>
             <td><span class="split-tag"><?= $r['split_mode'] === 'esit' ? '50/50' : 'Sadece ' . $r['person'] ?></span></td>
             <td class="amount">
-              <form method="post" style="display:flex; gap:6px; justify-content:flex-end;">
+              <form method="post" style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
                 <input type="hidden" name="action" value="update_recurring_amount">
                 <input type="hidden" name="id" value="<?= $r['id'] ?>">
+                <select name="category" style="background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:5px 6px;font-size:12px;">
+                  <?php foreach ($CATEGORIES as $c): ?><option <?= $c === $r['category'] ? 'selected' : '' ?>><?= $c ?></option><?php endforeach; ?>
+                </select>
                 <input type="number" step="0.01" name="amount" value="<?= $r['amount'] ?>" style="width:90px;background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:5px 8px;font-size:12.5px;">
                 <button class="btn-ghost" type="submit" style="padding:5px 10px;font-size:12px;">Güncelle</button>
               </form>

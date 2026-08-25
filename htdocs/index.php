@@ -3,7 +3,9 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 require_login();
 
-run_recurring_generation($pdo);
+try {
+    run_recurring_generation($pdo);
+} catch (Throwable $e) { /* geçiş henüz çalıştırılmamış olabilir, sayfa yine de açılsın */ }
 
 $curMonth = date('Y-m');
 
@@ -71,7 +73,13 @@ foreach ($pdo->query("SELECT * FROM salary_entries")->fetchAll() as $se) {
 }
 $hasSalaryData = !empty($salaryRateByPerson);
 
-$curMonthBuckets = get_expense_bucket_totals($pdo, $curMonth);
+try {
+    $curMonthBuckets = get_expense_bucket_totals($pdo, $curMonth);
+    $curMonthBucketsByPerson = get_expense_bucket_totals_by_person($pdo, $curMonth);
+} catch (Throwable $e) {
+    $curMonthBuckets = ['market' => 0, 'sabit' => 0, 'kisisel' => 0];
+    $curMonthBucketsByPerson = ['market' => ['Ozi'=>0,'Ceyda'=>0], 'sabit' => ['Ozi'=>0,'Ceyda'=>0], 'kisisel' => ['Ozi'=>0,'Ceyda'=>0]];
+}
 $hasExpenseData = array_sum($curMonthBuckets) > 0;
 
 $activeTab = 'dashboard';
@@ -102,12 +110,19 @@ include __DIR__ . '/header.php';
   <?php if ($hasExpenseData): ?>
     <div class="grid cols-2">
       <div class="invest-stats" style="gap:28px; align-items:flex-start;">
-        <div class="mini">Market<span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['market']) ?></span></div>
-        <div class="mini">Sabit Giderler <span style="font-weight:400; color:var(--paper-dim);">(kira, abonelikler vb.)</span><span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['sabit']) ?></span></div>
-        <div class="mini">Kişisel Harcamalar<span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['kisisel']) ?></span></div>
+        <div class="mini">Market<span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['market']) ?></span>
+          <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">Ceyda: <?= fmt($curMonthBucketsByPerson['market']['Ceyda']) ?> · Ozi: <?= fmt($curMonthBucketsByPerson['market']['Ozi']) ?></div>
+        </div>
+        <div class="mini">Sabit Giderler <span style="font-weight:400; color:var(--paper-dim);">(kira, fatura, abonelikler vb.)</span><span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['sabit']) ?></span>
+          <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">Ceyda: <?= fmt($curMonthBucketsByPerson['sabit']['Ceyda']) ?> · Ozi: <?= fmt($curMonthBucketsByPerson['sabit']['Ozi']) ?></div>
+        </div>
+        <div class="mini">Kişisel Harcamalar<span class="v" style="color:var(--gold-soft);"><?= fmt($curMonthBuckets['kisisel']) ?></span>
+          <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">Ceyda: <?= fmt($curMonthBucketsByPerson['kisisel']['Ceyda']) ?> · Ozi: <?= fmt($curMonthBucketsByPerson['kisisel']['Ozi']) ?></div>
+        </div>
       </div>
       <div class="chart-wrap" style="height:200px;"><canvas id="chartBucket"></canvas></div>
     </div>
+    <p style="font-size:11px; color:var(--paper-dim); margin-top:12px;">Kişi payları bölüşüme göre hesaplanıyor: 50/50 işaretli giderler yarı yarıya, "sadece ödeyene ait" olanlar tamamen o kişiye yazılıyor.</p>
   <?php else: ?>
     <div class="empty-state">Bu ay için henüz gider kaydı yok.</div>
   <?php endif; ?>

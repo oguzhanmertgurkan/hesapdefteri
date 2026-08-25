@@ -92,7 +92,11 @@ $curMonthEntries = array_filter($entries, fn($e) => $e['month'] === $curMonth);
 $combinedSalary = array_sum(array_column($curMonthEntries, 'salary_amount'));
 $curMonthBuckets = get_expense_bucket_totals($pdo, $curMonth);
 
-$incomeList = $pdo->query("SELECT * FROM extra_income ORDER BY income_date DESC, id DESC")->fetchAll();
+try {
+    $incomeList = $pdo->query("SELECT * FROM extra_income ORDER BY income_date DESC, id DESC")->fetchAll();
+} catch (Throwable $e) {
+    $incomeList = [];
+}
 $incomeThisMonth = array_filter($incomeList, fn($i) => substr($i['income_date'], 0, 7) === $curMonth);
 $incomeThisMonthByPerson = ['Ozi' => 0, 'Ceyda' => 0];
 foreach ($incomeThisMonth as $i) { $incomeThisMonthByPerson[$i['person']] += (float)$i['amount']; }
