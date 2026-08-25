@@ -139,8 +139,10 @@ function get_usdtry_rate($pdo, $maxAgeMinutes = 15) {
 function category_group($category) {
     $map = [
         'Market' => 'market',
-        'Kira / Fatura' => 'sabit',
+        'Kira' => 'sabit',
+        'Fatura' => 'sabit',
         'Abonelik' => 'sabit',
+        'Kira / Fatura' => 'sabit', // eski kayıtlarla geriye dönük uyumluluk
     ];
     return $map[$category] ?? 'kisisel';
 }
@@ -176,6 +178,31 @@ function get_expense_bucket_totals($pdo, $month) {
     $totals = ['market' => 0, 'sabit' => 0, 'kisisel' => 0];
     foreach ($stmt->fetchAll() as $row) {
         $totals[category_group($row['category'])] += (float)$row['s'];
+    }
+    return $totals;
+}
+
+// Aynı toplamları, bölüşüme göre (50/50 ise yarı yarıya, "sadece ödeyene ait"
+// ise tamamı ödeyene) kişi bazında ayırarak döner.
+// Döner: ['market'=>['Ozi'=>X,'Ceyda'=>Y], 'sabit'=>[...], 'kisisel'=>[...]]
+function get_expense_bucket_totals_by_person($pdo, $month) {
+    $stmt = $pdo->prepare("SELECT category, paid_by, amount, owed_by_other FROM expenses WHERE budget_month=?");
+    $stmt->execute([$month]);
+    $totals = [
+        'market' => ['Ozi' => 0, 'Ceyda' => 0],
+        'sabit' => ['Ozi' => 0, 'Ceyda' => 0],
+        'kisisel' => ['Ozi' => 0, 'Ceyda' => 0],
+    ];
+    foreach ($stmt->fetchAll() as $row) {
+        $bucket = category_group($row['category']);
+        $payer = $row['paid_by'];
+        $other = $payer === 'Ozi' ? 'Ceyda' : 'Ozi';
+        $amount = (float)$row['amount'];
+        $otherShare = (float)$row['owed_by_other'];
+        $payerShare = $amount - $otherShare;
+        if (!isset($totals[$bucket][$payer])) continue;
+        $totals[$bucket][$payer] += $payerShare;
+        $totals[$bucket][$other] += $otherShare;
     }
     return $totals;
 }
