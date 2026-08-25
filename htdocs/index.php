@@ -81,6 +81,10 @@ try {
     $curMonthBucketsByPerson = ['market' => ['Ozi'=>0,'Ceyda'=>0], 'sabit' => ['Ozi'=>0,'Ceyda'=>0], 'kisisel' => ['Ozi'=>0,'Ceyda'=>0]];
 }
 $hasExpenseData = array_sum($curMonthBuckets) > 0;
+$personGrandTotal = [
+    'Ceyda' => $curMonthBucketsByPerson['market']['Ceyda'] + $curMonthBucketsByPerson['sabit']['Ceyda'] + $curMonthBucketsByPerson['kisisel']['Ceyda'],
+    'Ozi' => $curMonthBucketsByPerson['market']['Ozi'] + $curMonthBucketsByPerson['sabit']['Ozi'] + $curMonthBucketsByPerson['kisisel']['Ozi'],
+];
 
 $activeTab = 'dashboard';
 $loadChart = true;
@@ -175,10 +179,10 @@ Chart.defaults.font.family = "'Inter', sans-serif";
 new Chart(document.getElementById('chartBucket'), {
   type: 'doughnut',
   data: {
-    labels: ['Market', 'Sabit Giderler', 'Kişisel Harcamalar'],
+    labels: ['Ceyda', 'Ozi'],
     datasets: [{
-      data: [<?= $curMonthBuckets['market'] ?>, <?= $curMonthBuckets['sabit'] ?>, <?= $curMonthBuckets['kisisel'] ?>],
-      backgroundColor: ['#c9a227', '#c0564b', '#4fa381'],
+      data: [<?= $personGrandTotal['Ceyda'] ?>, <?= $personGrandTotal['Ozi'] ?>],
+      backgroundColor: ['#4fa381', '#c9a227'],
       borderColor: '#1b2422', borderWidth: 2
     }]
   },
