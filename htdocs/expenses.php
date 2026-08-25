@@ -323,7 +323,9 @@ document.querySelector('.form-toggle').addEventListener('click', () => setTimeou
               <form method="post" style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
                 <input type="hidden" name="action" value="update_recurring_amount">
                 <input type="hidden" name="id" value="<?= $r['id'] ?>">
-                <select name="category" style="background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:5px 6px;font-size:12px;">
+                <?php $isLegacyCat = !in_array($r['category'], $CATEGORIES, true); ?>
+                <select name="category" style="background:var(--ink);border:1px solid var(--line);color:<?= $isLegacyCat ? '#e0736b' : 'var(--paper)' ?>;border-radius:6px;padding:5px 6px;font-size:12px;" <?= $isLegacyCat ? 'title="Bu, artık kullanılmayan eski bir kategori. Listeden doğru kategoriyi seçip Güncelle\'ye basmadan önce dikkatli ol."' : '' ?>>
+                  <?php if ($isLegacyCat): ?><option value="<?= htmlspecialchars($r['category']) ?>" selected>⚠ <?= htmlspecialchars($r['category']) ?> (eski)</option><?php endif; ?>
                   <?php foreach ($CATEGORIES as $c): ?><option <?= $c === $r['category'] ? 'selected' : '' ?>><?= $c ?></option><?php endforeach; ?>
                 </select>
                 <input type="number" step="0.01" name="amount" value="<?= $r['amount'] ?>" style="width:90px;background:var(--ink);border:1px solid var(--line);color:var(--paper);border-radius:6px;padding:5px 8px;font-size:12.5px;">

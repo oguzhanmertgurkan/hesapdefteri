@@ -45,7 +45,11 @@ $trendLabels = array_map(fn($m) => date('M', strtotime($m . '-01')), $months);
 
 $catTotals = [];
 foreach ($monthExpenses as $e) {
-    $catTotals[$e['category']] = ($catTotals[$e['category']] ?? 0) + $e['amount'];
+    // Eski/tanınmayan kategori etiketleri (örn. Kira ve Fatura ayrılmadan
+    // önceki birleşik "Kira / Fatura" kaydı) burada Fatura'ya birleştirilir,
+    // yoksa grafikte kendi başına, kafa karıştırıcı ayrı bir dilim olarak görünür.
+    $catKey = $e['category'] === 'Kira / Fatura' ? 'Fatura' : $e['category'];
+    $catTotals[$catKey] = ($catTotals[$catKey] ?? 0) + $e['amount'];
 }
 
 // ---- Maaş & Tasarruf Oranı (bu ay + son 6 ay trendi) ----
