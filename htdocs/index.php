@@ -73,6 +73,19 @@ foreach ($pdo->query("SELECT * FROM salary_entries")->fetchAll() as $se) {
 }
 $hasSalaryData = !empty($salaryRateByPerson);
 
+// ---- Gelir-Gider Dengesi (Bu Ay) ----
+$combinedSalary = ($salaryCurMonth['Ozi']['salary'] ?? 0) + ($salaryCurMonth['Ceyda']['salary'] ?? 0);
+try {
+    $incomeStmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) s FROM extra_income WHERE DATE_FORMAT(income_date,'%Y-%m')=?");
+    $incomeStmt->execute([$curMonth]);
+    $extraIncomeThisMonth = (float)$incomeStmt->fetch()['s'];
+} catch (Throwable $e) {
+    $extraIncomeThisMonth = 0;
+}
+$totalIncome = $combinedSalary + $extraIncomeThisMonth;
+$balance = $totalIncome - $monthTotal;
+$missingSalaryPeople = array_diff(['Ozi', 'Ceyda'], array_keys($salaryCurMonth));
+
 try {
     $curMonthBuckets = get_expense_bucket_totals($pdo, $curMonth);
     $curMonthBucketsByPerson = get_expense_bucket_totals_by_person($pdo, $curMonth);
@@ -107,6 +120,28 @@ include __DIR__ . '/header.php';
     <div class="val <?= $overallReturn >= 0 ? 'pos' : 'neg' ?>"><?= ($overallReturn >= 0 ? '+' : '') . number_format($overallReturn, 2) ?>%</div>
     <div class="sub">Yatırılan tutara göre</div>
   </div>
+</div>
+
+<div class="panel-box">
+  <h3>Gelir-Gider Dengesi (Bu Ay)</h3>
+  <div class="invest-stats" style="gap:32px;">
+    <div class="mini">Toplam Gelir <span style="font-weight:400; color:var(--paper-dim);">(maaş + ek gelir)</span>
+      <span class="v"><?= fmt($totalIncome) ?></span>
+      <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">Maaş: <?= fmt($combinedSalary) ?><?= $extraIncomeThisMonth > 0 ? ' · Ek Gelir: ' . fmt($extraIncomeThisMonth) : '' ?></div>
+    </div>
+    <div class="mini">Toplam Gider
+      <span class="v"><?= fmt($monthTotal) ?></span>
+    </div>
+    <div class="mini">Denge
+      <span class="v <?= $balance >= 0 ? 'pos' : 'neg' ?>"><?= ($balance >= 0 ? '+' : '') . fmt($balance) ?></span>
+      <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;"><?= $balance >= 0 ? 'Bu ay artıdasınız' : 'Bu ay açıktasınız' ?></div>
+    </div>
+  </div>
+  <?php if ($missingSalaryPeople): ?>
+    <p style="font-size:11.5px; color:var(--paper-dim); margin-top:14px;">
+      <?= implode(' ve ', $missingSalaryPeople) ?> için bu ay maaş girilmedi, denge eksik hesaplanıyor olabilir. <a href="salary.php" class="small-link">Maaş gir →</a>
+    </p>
+  <?php endif; ?>
 </div>
 
 <div class="panel-box">
