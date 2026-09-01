@@ -147,10 +147,18 @@ function category_group($category) {
     return $map[$category] ?? 'kisisel';
 }
 
+// Maaş günü ayın 15'i. Bu günden önce ("henüz maaş yatmadı" döneminde)
+// sabit ödemelerin otomatik oluşturulması ve "bu ay maaş girilmedi" gibi
+// uyarıların gösterilmesi anlamsız/erken olur — bu yardımcı fonksiyon
+// ikisinde de aynı eşiği kullanmak için var.
+function is_after_payday() {
+    return (int)date('j') >= 15;
+}
+
 // Aktif sabit ödemeleri, ayın 15'inden itibaren (maaş günü) o ay için
 // henüz oluşturulmadıysa, o ayın 15'i tarihiyle gider tablosuna ekler.
 function run_recurring_generation($pdo) {
-    if ((int)date('j') < 15) return;
+    if (!is_after_payday()) return;
 
     $targetMonth = date('Y-m');
     $targetDate = $targetMonth . '-15';

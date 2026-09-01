@@ -107,7 +107,7 @@ $loadChart = true;
 include __DIR__ . '/header.php';
 ?>
 
-<?php if ($missingPeople): ?>
+<?php if ($missingPeople && is_after_payday()): ?>
   <div class="panel-box">
     <h3>Bu Ayın Maaşını Gir</h3>
     <?php foreach ($missingPeople as $person): ?>

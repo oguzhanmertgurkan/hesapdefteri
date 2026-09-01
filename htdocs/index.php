@@ -138,10 +138,16 @@ include __DIR__ . '/header.php';
     </div>
     <div class="mini">Denge
       <span class="v <?= $balance >= 0 ? 'pos' : 'neg' ?>"><?= ($balance >= 0 ? '+' : '') . fmt($balance) ?></span>
-      <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;"><?= $balance >= 0 ? 'Bu ay artıdasınız' : 'Bu ay açıktasınız' ?></div>
+      <div style="font-size:11px; color:var(--paper-dim); margin-top:4px;">
+        <?php if ($totalIncome == 0 && !is_after_payday()): ?>
+          Maaş günü (ayın 15'i) henüz gelmedi
+        <?php else: ?>
+          <?= $balance >= 0 ? 'Bu ay artıdasınız' : 'Bu ay açıktasınız' ?>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
-  <?php if ($missingSalaryPeople): ?>
+  <?php if ($missingSalaryPeople && is_after_payday()): ?>
     <p style="font-size:11.5px; color:var(--paper-dim); margin-top:14px;">
       <?= implode(' ve ', $missingSalaryPeople) ?> için bu ay maaş girilmedi, denge eksik hesaplanıyor olabilir. <a href="salary.php" class="small-link">Maaş gir →</a>
     </p>
