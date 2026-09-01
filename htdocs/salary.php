@@ -80,8 +80,7 @@ unset($e);
 $existingThisMonth = array_column(array_filter($entries, fn($e) => $e['month'] === $curMonth), 'person');
 $missingPeople = array_diff($PEOPLE, $existingThisMonth);
 
-$months = [];
-for ($i = 5; $i >= 0; $i--) { $months[] = date('Y-m', strtotime("-$i months")); }
+$months = recent_budget_periods(6);
 $rateByPersonMonth = [];
 foreach ($entries as $e) {
     $rateByPersonMonth[$e['person']][$e['month']] = $e['rate'];

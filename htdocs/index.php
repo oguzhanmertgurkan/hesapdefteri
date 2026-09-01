@@ -31,10 +31,7 @@ foreach ($positions as $p) {
 }
 $overallReturn = $totalInvested > 0 ? (($totalCurrent - $totalInvested) / $totalInvested * 100) : 0;
 
-$months = [];
-for ($i = 5; $i >= 0; $i--) {
-    $months[] = date('Y-m', strtotime("-$i months"));
-}
+$months = recent_budget_periods(6);
 $trendData = [];
 foreach ($months as $m) {
     $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) s FROM expenses WHERE budget_month=?");

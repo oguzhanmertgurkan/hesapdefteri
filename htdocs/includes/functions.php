@@ -179,6 +179,19 @@ function current_budget_period() {
     return budget_period_for_date(date('Y-m-d'));
 }
 
+// Son N dönemi (bugünkü dönem dahil, en eskiden en yeniye) döner —
+// trend grafiklerinde kullanılır. Takvim ayına göre değil, mevcut
+// döneme göre hesaplanır: örn. ayın 1'i-14'ü arasıysa henüz başlamamış
+// bir sonraki dönem listeye dahil edilmez.
+function recent_budget_periods($count = 6) {
+    $cur = current_budget_period();
+    $periods = [];
+    for ($i = $count - 1; $i >= 0; $i--) {
+        $periods[] = date('Y-m', strtotime($cur . '-01 -' . $i . ' months'));
+    }
+    return $periods;
+}
+
 // "2026-08" gibi bir dönem etiketini "15 Ağustos – 15 Eylül 2026" gibi
 // okunur bir aralığa çevirir.
 function fmt_budget_period($ym) {
