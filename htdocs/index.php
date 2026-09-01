@@ -187,10 +187,15 @@ include __DIR__ . '/header.php';
           <span class="v" style="color:var(--gold-soft);">%<?= number_format($d['rate'], 1) ?></span>
           <div style="font-size:11.5px; color:var(--paper-dim); margin-top:4px;">Maaş: <?= fmt($d['salary']) ?> · Yatırılan: <?= fmt($d['contributed']) ?></div>
         </div>
-      <?php else: ?>
+      <?php elseif (is_after_payday()): ?>
         <div class="mini">
           <?= $person ?>
           <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">Bu ay için maaş girilmedi. <a href="salary.php" class="small-link">Gir →</a></div>
+        </div>
+      <?php else: ?>
+        <div class="mini">
+          <?= $person ?>
+          <div style="font-size:12px; color:var(--paper-dim); margin-top:4px;">Maaş günü (ayın 15'i) henüz gelmedi.</div>
         </div>
       <?php endif; ?>
     <?php endforeach; ?>
