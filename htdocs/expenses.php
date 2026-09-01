@@ -137,6 +137,20 @@ $rows = $stmt->fetchAll();
 $cardsById = [];
 foreach ($cardList as $c) { $cardsById[$c['id']] = $c; }
 
+// Her kart için, seçilen dönemde (varsayılan: içinde bulunduğumuz maaş
+// dönemi) o karttan yapılan harcamaların dökümü ve toplamı.
+$fCardMonth = $_GET['card_month'] ?? current_budget_period();
+$cardSpending = [];
+foreach ($cardList as $c) {
+    $csStmt = $pdo->prepare("SELECT * FROM expenses WHERE credit_card_id=? AND budget_month=? ORDER BY expense_date DESC");
+    $csStmt->execute([$c['id'], $fCardMonth]);
+    $items = $csStmt->fetchAll();
+    $cardSpending[$c['id']] = [
+        'items' => $items,
+        'total' => array_sum(array_column($items, 'amount')),
+    ];
+}
+
 function split_label($e) {
     $other = $e['paid_by'] === 'Ozi' ? 'Ceyda' : 'Ozi';
     if ($e['split_mode'] === 'esit') return '50/50';
@@ -284,6 +298,52 @@ document.querySelector('.form-toggle').addEventListener('click', () => setTimeou
         </tbody>
       </table>
     </div>
+  <?php endif; ?>
+</div>
+
+<div class="panel-box">
+  <h3>Kredi Kartı Harcamaları</h3>
+  <p style="font-size:12.5px; color:var(--paper-dim); margin:-6px 0 14px 0; line-height:1.5;">
+    Seçilen dönemde her kartın son ödemesine düşen harcamalar — neye, ne kadar harcanmış.
+  </p>
+  <form method="get" class="filters" style="margin-bottom:6px;">
+    <?php if ($fCat): ?><input type="hidden" name="category" value="<?= htmlspecialchars($fCat) ?>"><?php endif; ?>
+    <?php if ($fPerson): ?><input type="hidden" name="person" value="<?= htmlspecialchars($fPerson) ?>"><?php endif; ?>
+    <?php if ($fMonth): ?><input type="hidden" name="month" value="<?= htmlspecialchars($fMonth) ?>"><?php endif; ?>
+    <input type="month" name="card_month" value="<?= htmlspecialchars($fCardMonth) ?>" onchange="this.form.submit()">
+  </form>
+  <p style="font-size:11.5px; color:var(--paper-dim); margin:0 0 14px 0;">Dönem: <span class="cat-tag"><?= fmt_budget_period($fCardMonth) ?></span></p>
+  <?php if (!$cardList): ?>
+    <div class="empty-state" style="padding:20px;">Henüz kart tanımlanmadı.</div>
+  <?php else: ?>
+    <?php foreach ($cardList as $c): $cs = $cardSpending[$c['id']]; ?>
+      <div style="margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--line);">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+          <div><strong><?= htmlspecialchars($c['name']) ?></strong> <span class="person-tag"><?= htmlspecialchars($c['person']) ?></span></div>
+          <span class="mono" style="color:var(--gold-soft); font-weight:600; font-size:15px;"><?= fmt($cs['total']) ?></span>
+        </div>
+        <?php if (!$cs['items']): ?>
+          <div class="empty-state" style="padding:10px; font-size:12.5px;">Bu dönemde harcama yok.</div>
+        <?php else: ?>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>Tarih</th><th>Kategori</th><th>Açıklama</th><th>Ödeyen</th><th style="text-align:right;">Tutar</th></tr></thead>
+              <tbody>
+              <?php foreach ($cs['items'] as $it): ?>
+                <tr>
+                  <td><?= $it['expense_date'] ?></td>
+                  <td><span class="cat-tag"><?= htmlspecialchars($it['category']) ?></span></td>
+                  <td><?= $it['description'] ? htmlspecialchars($it['description']) : '<span style="color:var(--paper-dim)">—</span>' ?></td>
+                  <td><span class="person-tag"><?= htmlspecialchars($it['paid_by']) ?></span></td>
+                  <td class="amount"><?= fmt($it['amount']) ?></td>
+                </tr>
+              <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
+      </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 
