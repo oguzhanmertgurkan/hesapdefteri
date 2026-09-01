@@ -7,7 +7,7 @@ try {
     run_recurring_generation($pdo);
 } catch (Throwable $e) { /* geçiş henüz çalıştırılmamış olabilir, sayfa yine de açılsın */ }
 
-$curMonth = date('Y-m');
+$curMonth = current_budget_period();
 
 $stmt = $pdo->prepare("SELECT * FROM expenses WHERE budget_month = ?");
 $stmt->execute([$curMonth]);
@@ -112,7 +112,7 @@ include __DIR__ . '/header.php';
   <div class="stat-card">
     <div class="lbl">Bu Ay Toplam Gider</div>
     <div class="val"><?= fmt($monthTotal) ?></div>
-    <div class="sub"><?= count($monthExpenses) ?> kayıt · <?= date('F Y') ?></div>
+    <div class="sub"><?= count($monthExpenses) ?> kayıt · <?= fmt_budget_period($curMonth) ?></div>
   </div>
   <div class="stat-card">
     <div class="lbl">Toplam Birikim (Güncel Değer)</div>

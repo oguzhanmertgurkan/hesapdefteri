@@ -4,7 +4,7 @@ require_once __DIR__ . '/includes/functions.php';
 require_login();
 
 $PEOPLE = ['Ozi', 'Ceyda'];
-$curMonth = date('Y-m');
+$curMonth = current_budget_period();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
@@ -97,7 +97,7 @@ try {
 } catch (Throwable $e) {
     $incomeList = [];
 }
-$incomeThisMonth = array_filter($incomeList, fn($i) => substr($i['income_date'], 0, 7) === $curMonth);
+$incomeThisMonth = array_filter($incomeList, fn($i) => budget_period_for_date($i['income_date']) === $curMonth);
 $incomeThisMonthByPerson = ['Ozi' => 0, 'Ceyda' => 0];
 foreach ($incomeThisMonth as $i) { $incomeThisMonthByPerson[$i['person']] += (float)$i['amount']; }
 $incomeThisMonthTotal = array_sum($incomeThisMonthByPerson);
@@ -115,7 +115,7 @@ include __DIR__ . '/header.php';
         <input type="hidden" name="action" value="set_salary">
         <input type="hidden" name="person" value="<?= $person ?>">
         <input type="hidden" name="month" value="<?= $curMonth ?>">
-        <div class="field" style="margin:0;"><label><?= $person ?> — <?= date('F Y') ?> Maaşı (₺)</label><input type="number" step="0.01" name="salary_amount" required style="width:180px;"></div>
+        <div class="field" style="margin:0;"><label><?= $person ?> — <?= fmt_budget_period($curMonth) ?> Maaşı (₺)</label><input type="number" step="0.01" name="salary_amount" required style="width:180px;"></div>
         <button class="btn-primary" type="submit">Kaydet</button>
       </form>
     <?php endforeach; ?>

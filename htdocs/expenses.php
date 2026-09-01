@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // kategoriyle görünmeye devam etmesin. Geçmiş aylara dokunulmaz,
                 // tutar bilerek senkronize edilmez (o zaten ayrı bir davranış).
                 $syncStmt = $pdo->prepare("UPDATE expenses SET category=? WHERE recurring_id=? AND budget_month=?");
-                $syncStmt->execute([$category, $id, date('Y-m')]);
+                $syncStmt->execute([$category, $id, current_budget_period()]);
             } else {
                 $stmt = $pdo->prepare("UPDATE recurring_expenses SET amount=? WHERE id=?");
                 $stmt->execute([$amount, $id]);
@@ -146,7 +146,7 @@ function split_label($e) {
 
 $catLabel = $fCat ?: 'Tüm Kategoriler';
 $personLabel = $fPerson ?: 'Herkes';
-$monthLabel = $fMonth ? date('F Y', strtotime($fMonth . '-01')) : 'Tüm Zamanlar';
+$monthLabel = $fMonth ? fmt_budget_period($fMonth) : 'Tüm Zamanlar';
 
 $activeTab = 'expenses';
 include __DIR__ . '/header.php';

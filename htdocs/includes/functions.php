@@ -155,6 +155,41 @@ function is_after_payday() {
     return (int)date('j') >= 15;
 }
 
+// ---------------------------------------------------------------
+// "Ay" bu uygulamada takvim ayı DEĞİL, MAAŞ DÖNEMİDİR: her ayın 15'i
+// bir dönemi kapatıp yenisini başlatır (maaş o gün yatıyor). Örn. 1-14
+// Eylül hâlâ "15 Ağustos - 15 Eylül" dönemine aittir; dönemin etiketi
+// (budget_month) her zaman dönemin BAŞLADIĞI ayın 'Y-m' değeridir.
+// Sabit ödemeler ve kredi kartı hesaplaması zaten bu mantığa göre
+// çalışıyordu; nakit/banka giderleri ve "bu ay" filtreleri de artık
+// aynı mantığı kullanıyor.
+// ---------------------------------------------------------------
+
+// Verilen tarihin ait olduğu maaş dönemini ('Y-m') döner.
+function budget_period_for_date($dateStr) {
+    $d = new DateTime($dateStr);
+    if ((int)$d->format('j') < 15) {
+        $d->modify('-1 month');
+    }
+    return $d->format('Y-m');
+}
+
+// Bugünün ait olduğu maaş dönemi.
+function current_budget_period() {
+    return budget_period_for_date(date('Y-m-d'));
+}
+
+// "2026-08" gibi bir dönem etiketini "15 Ağustos – 15 Eylül 2026" gibi
+// okunur bir aralığa çevirir.
+function fmt_budget_period($ym) {
+    $trAylar = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    $start = new DateTime($ym . '-15');
+    $end = (clone $start)->modify('+1 month');
+    $startLabel = '15 ' . $trAylar[(int)$start->format('n') - 1];
+    $endLabel = '15 ' . $trAylar[(int)$end->format('n') - 1] . ' ' . $end->format('Y');
+    return $startLabel . ' – ' . $endLabel;
+}
+
 // Aktif sabit ödemeleri, ayın 15'inden itibaren (maaş günü) o ay için
 // henüz oluşturulmadıysa, o ayın 15'i tarihiyle gider tablosuna ekler.
 function run_recurring_generation($pdo) {
@@ -215,8 +250,8 @@ function get_expense_bucket_totals_by_person($pdo, $month) {
     return $totals;
 }
 
-// Bir harcamanın hangi "bütçe ayı"na sayılacağını hesaplar.
-// Nakit/banka kartı: her zaman satın alma tarihinin ayı.
+// Bir harcamanın hangi "bütçe ayı"na (maaş dönemine) sayılacağını hesaplar.
+// Nakit/banka kartı: satın alma tarihinin ait olduğu maaş dönemi (15'i-15'i).
 // Kredi kartı: harcama önce hangi hesap kesimine (statement) girdiği bulunur,
 // sonra o kesimin SON ÖDEME tarihinin hangi aya denk geldiğine bakılır —
 // çünkü para gerçekten o ay hesaptan çıkıyor. Son ödeme hafta sonuna
@@ -224,7 +259,7 @@ function get_expense_bucket_totals_by_person($pdo, $month) {
 function compute_budget_month($expenseDate, $paymentMethod, $cutoffDay = null, $dueDay = null) {
     $date = new DateTime($expenseDate);
     if ($paymentMethod !== 'kredi_karti' || !$cutoffDay) {
-        return $date->format('Y-m');
+        return budget_period_for_date($expenseDate);
     }
 
     // 1) Hangi kesim ayına giriyor?
